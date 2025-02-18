@@ -26,8 +26,11 @@ RUN mkdir -p staticfiles
 # Collect static files
 RUN python src/manage.py collectstatic --noinput
 
+# Set the Python path to include the src directory
+ENV PYTHONPATH=/app/src
+
 # Expose the port
 EXPOSE 8000
 
 # Start Gunicorn server
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "src.main.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "main.wsgi:application"]
