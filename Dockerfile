@@ -24,10 +24,10 @@ COPY . /app/
 RUN mkdir -p staticfiles
 
 # Collect static files
-RUN cd src && python manage.py collectstatic --noinput
+RUN python src/manage.py collectstatic --noinput
 
 # Expose the port
 EXPOSE 8000
 
 # Start Gunicorn server
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "src.hairstyle.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "src.main.wsgi:application"]
