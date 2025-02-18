@@ -56,6 +56,11 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = True
+CSRF_TRUSTED_ORIGINS = ['https://9mvjpd94ym.ap-southeast-1.awsapprunner.com'] 
+
 ROOT_URLCONF = "main.urls"
 
 TEMPLATES = [
