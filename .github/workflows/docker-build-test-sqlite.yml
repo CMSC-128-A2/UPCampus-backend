@@ -2,8 +2,12 @@ name: Docker Build and Test
 
 on:
     push:
-        branches: ['*']
-    pull_request:
+        branches-ignore: ["main"] # Trigger on all branches except main
+    pull_request: # Also trigger on pull requests
+
+env:
+    AWS_REGION: ap-southeast-1
+    ECR_REPOSITORY: upcampus
 
 permissions:
     contents: read
@@ -17,13 +21,32 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v3
 
+            - name: Delete .env file
+              run: |
+                  rm -f .env
+                  touch .env
+
+            - name: Create .env file
+              env:
+                  SECRET_KEY: ${{ secrets.SECRET_KEY }}
+                  DB_NAME: ${{ secrets.DB_NAME }}
+                  DB_USER: ${{ secrets.DB_USER }}
+                  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+                  DB_HOST: ${{ secrets.DB_HOST }}
+                  DB_PORT: ${{ secrets.DB_PORT }}
+                  DEBUG: "False"
+              run: |
+                  echo "SECRET_KEY=${SECRET_KEY}" > .env
+                  echo "DB_NAME=${DB_NAME}" >> .env
+                  echo "DB_USER=${DB_USER}" >> .env
+                  echo "DB_PASSWORD=${DB_PASSWORD}" >> .env
+                  echo "DB_HOST=${DB_HOST}" >> .env
+                  echo "DB_PORT=${DB_PORT}" >> .env
+                  echo "DEBUG=False" >> .env
+
             - name: Build Docker image
               run: |
                   docker build -t upcampus:test .
-
-            - name: Run Migrations
-              run: |
-                  docker run upcampus:test python src/manage.py migrate
 
             - name: Run tests
               run: |
