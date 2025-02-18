@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 import sys
+from django.http import HttpResponse
+from django.urls import path
 
 from dotenv import load_dotenv
 
@@ -136,3 +138,11 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles/')
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+
+def health_check(request):
+    return HttpResponse("OK")
+
+
+path("health/", health_check, name="health_check"),
