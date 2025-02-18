@@ -1,0 +1,30 @@
+name: Docker Build and Test
+
+on:
+    push:
+        branches: ['*']
+    pull_request:
+
+permissions:
+    contents: read
+
+jobs:
+    build-and-test:
+        name: Build and Test
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Build Docker image
+              run: |
+                  docker build -t upcampus:test .
+
+            - name: Run Migrations
+              run: |
+                  docker run upcampus:test python src/manage.py migrate
+
+            - name: Run tests
+              run: |
+                  docker run upcampus:test python src/manage.py test
