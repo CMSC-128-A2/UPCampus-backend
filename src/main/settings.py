@@ -32,7 +32,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-1k2eh-^_y5x4zjx1b!w)v^8(!&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.awsapprunner.com' ]
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
