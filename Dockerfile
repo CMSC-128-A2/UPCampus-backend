@@ -33,4 +33,4 @@ ENV PYTHONPATH=/app/src
 EXPOSE 8000
 
 # Start Gunicorn server
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "main.wsgi:application"]
+CMD ["gunicorn", "--chdir", "src", "--bind", "0.0.0.0:8000", "main.wsgi:application"]
