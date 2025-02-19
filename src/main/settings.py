@@ -85,20 +85,16 @@ WSGI_APPLICATION = "main.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-try:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("DB_NAME"),
-            "USER": os.getenv("DB_USER"),
-            "PASSWORD": os.getenv("DB_PASSWORD"),
-            "HOST": os.getenv("DB_HOST"),
-            "PORT": os.getenv("DB_PORT"),
-        }
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql" if os.getenv("DB_HOST") else "django.db.backends.sqlite3",
+        "NAME": os.getenv("DB_NAME", BASE_DIR / "db.sqlite3"),
+        "USER": os.getenv("DB_USER", ""),
+        "PASSWORD": os.getenv("DB_PASSWORD", ""),
+        "HOST": os.getenv("DB_HOST", ""),
+        "PORT": os.getenv("DB_PORT", ""),
     }
-except Exception as e:
-    print(f"Database configuration error: {e}")
-    sys.exit(3)
+}
 
 
 # Password validation
