@@ -1,9 +1,10 @@
 name: Docker Build and Test
 
 on:
-    push:
-        branches-ignore: ["main"] # Trigger on all branches except main
-    pull_request: # Also trigger on pull requests
+    # push:
+    #     branches-ignore: ["main"]
+    # pull_request:
+    workflow_dispatch: # Trigger manually for now
 
 env:
     AWS_REGION: ap-southeast-1
