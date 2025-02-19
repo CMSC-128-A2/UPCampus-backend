@@ -40,3 +40,5 @@ jobs:
             - name: Run tests
               run: |
                   docker run upcampus:test python src/manage.py test
+
+# test
