@@ -12,10 +12,9 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
-import sys
-
 
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -32,7 +31,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-1k2eh-^_y5x4zjx1b!w)v^8(!&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 
 # Application definition
@@ -44,10 +43,13 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -59,7 +61,7 @@ MIDDLEWARE = [
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = True
-CSRF_TRUSTED_ORIGINS = ['https://9mvjpd94ym.ap-southeast-1.awsapprunner.com'] 
+CSRF_TRUSTED_ORIGINS = ["https://upcampus.vercel.app"]
 
 ROOT_URLCONF = "main.urls"
 
@@ -141,5 +143,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # Temporary CORS settings
-CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOWED_ORIGINS = ["https://upcampus.vercel.app"]
+CORS_ALLOWED_ORIGINS_REGEXES = [r"^http://(localhost|127\.0\.0\.1):\d+"]
 CORS_ALLOW_CREDENTIALS = True
+
+
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
