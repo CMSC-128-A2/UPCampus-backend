@@ -31,7 +31,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-1k2eh-^_y5x4zjx1b!w)v^8(!&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 
 # Application definition
@@ -61,11 +61,7 @@ MIDDLEWARE = [
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = True
-CSRF_TRUSTED_ORIGINS = [
-    "https://upcampus.vercel.app",
-    "localhost",
-    "127.0.0.1",
-]
+CSRF_TRUSTED_ORIGINS = ["https://upcampus.vercel.app"]
 
 ROOT_URLCONF = "main.urls"
 
