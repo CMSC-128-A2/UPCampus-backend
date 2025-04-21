@@ -33,8 +33,17 @@ cd UPCampus-backend
 
 3. **Set up environment variables**
    ```bash
-   cp .env.example .env
-   # Edit .env file with your database and other configurations
+   cp .env
+   ## Django settings
+   DEBUG=True
+   SECRET_KEY=django-insecure-1k2eh-^_y5x4zjx1b!w)v^8(!&c=9%0$c(*sp8m3k_zertl#*!
+
+   # Database settings (using SQLite for development)
+   DB_NAME=db.sqlite3
+   DB_USER=
+   DB_PASSWORD=
+   DB_HOST=
+   DB_PORT= 
    ```
 
 4. **Apply migrations**
