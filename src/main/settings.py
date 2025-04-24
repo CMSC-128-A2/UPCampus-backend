@@ -60,9 +60,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = os.getenv("DEBUG", "True") != "True"
 CSRF_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = os.getenv("DEBUG", "True") != "True"
 CSRF_TRUSTED_ORIGINS = ["https://upcampus.vercel.app"]
 
 ROOT_URLCONF = "main.urls"
@@ -144,11 +144,14 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles/')
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-# Temporary CORS settings
-
-CORS_ALLOWED_ORIGINS = ["https://upcampus.vercel.app"]
-CORS_ALLOWED_ORIGINS_REGEXES = [r"^http://(localhost|127\.0\.0\.1):\d+"]
+# CORS settings
+CORS_ALLOWED_ORIGINS = [
+    "https://upcampus.vercel.app",
+    "http://localhost:3000",
+]
+CORS_ALLOWED_ORIGIN_REGEXES = [r"^http://(localhost|127\.0\.0\.1):\d+"]
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all origins in development mode
 
 
 STORAGES = {
