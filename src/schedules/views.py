@@ -10,7 +10,8 @@ from .serializers import (
     CourseSerializer,
     CourseDetailSerializer,
     ClassSectionSerializer,
-    ClassSectionCreateSerializer
+    ClassSectionCreateSerializer,
+    ClassSectionUpdateSerializer
 )
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -60,8 +61,10 @@ class ClassSectionViewSet(viewsets.ModelViewSet):
     queryset = ClassSection.objects.all().select_related('course')
     
     def get_serializer_class(self):
-        if self.action in ['create', 'update', 'partial_update']:
+        if self.action == 'create':
             return ClassSectionCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return ClassSectionUpdateSerializer
         return ClassSectionSerializer
     
     def create(self, request, *args, **kwargs):
@@ -84,6 +87,9 @@ class ClassSectionViewSet(viewsets.ModelViewSet):
             )
     
     def update(self, request, *args, **kwargs):
+        """Update an existing section with logging and error handling"""
+        print(f"ClassSectionViewSet.update called with data: {request.data}")
+        
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
