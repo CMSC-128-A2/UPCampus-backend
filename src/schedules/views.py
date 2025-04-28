@@ -17,8 +17,21 @@ class CourseViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing courses and their sections
     """
-    queryset = Course.objects.all()
+    queryset = Course.objects.all().prefetch_related('sections')
     serializer_class = CourseSerializer
+    
+    def list(self, request, *args, **kwargs):
+        """Override list method to add extra logging and ensure related sections are included"""
+        print(f"CourseViewSet.list called by {request.user}")
+        queryset = self.get_queryset()
+        print(f"Found {queryset.count()} courses")
+        
+        # Trigger prefetch of related sections
+        for course in queryset:
+            print(f"Course: {course.course_code}, Sections: {course.sections.count()}")
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -28,6 +41,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['delete'], url_path='sections/(?P<section_name>[^/.]+)')
     def delete_section(self, request, pk=None, section_name=None):
         """Delete a section from a course"""
+        print(f"Deleting section {section_name} from course {pk}")
         course = self.get_object()
         try:
             section = course.sections.get(section=section_name)
@@ -43,7 +57,7 @@ class ClassSectionViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing class sections
     """
-    queryset = ClassSection.objects.all()
+    queryset = ClassSection.objects.all().select_related('course')
     
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -51,6 +65,9 @@ class ClassSectionViewSet(viewsets.ModelViewSet):
         return ClassSectionSerializer
     
     def create(self, request, *args, **kwargs):
+        """Create a new section with logging and error handling"""
+        print(f"ClassSectionViewSet.create called with data: {request.data}")
+        
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
