@@ -5,13 +5,18 @@ from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
 
-from .models import Course, ClassSection
+from .models import Course, ClassSection, Department, Faculty, AdminUser
 from .serializers import (
     CourseSerializer,
     CourseDetailSerializer,
     ClassSectionSerializer,
     ClassSectionCreateSerializer,
-    ClassSectionUpdateSerializer
+    ClassSectionUpdateSerializer,
+    DepartmentSerializer,
+    FacultySerializer,
+    FacultyDetailSerializer,
+    AdminUserSerializer,
+    AdminUserDetailSerializer
 )
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -58,7 +63,7 @@ class ClassSectionViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing class sections
     """
-    queryset = ClassSection.objects.all().select_related('course')
+    queryset = ClassSection.objects.all().select_related('course', 'faculty')
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -103,5 +108,96 @@ class ClassSectionViewSet(viewsets.ModelViewSet):
             section = request.data.get('section')
             return Response(
                 {"detail": f"Section {section} already exists for {course_code}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+class DepartmentViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing academic departments
+    """
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
+    
+    def create(self, request, *args, **kwargs):
+        print(f"DepartmentViewSet.create called with data: {request.data}")
+        
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        try:
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except IntegrityError:
+            name = request.data.get('name')
+            return Response(
+                {"detail": f"Department {name} already exists"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+class FacultyViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing faculty members
+    """
+    queryset = Faculty.objects.all().select_related('department').prefetch_related('class_sections')
+    serializer_class = FacultySerializer
+    
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return FacultyDetailSerializer
+        return FacultySerializer
+    
+    def list(self, request, *args, **kwargs):
+        print(f"FacultyViewSet.list called by {request.user}")
+        queryset = self.get_queryset()
+        print(f"Found {queryset.count()} faculty members")
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True)
+    def schedules(self, request, pk=None):
+        """Get all schedules for a faculty member"""
+        faculty = self.get_object()
+        sections = faculty.class_sections.all().select_related('course')
+        serializer = ClassSectionSerializer(sections, many=True)
+        return Response(serializer.data)
+
+class AdminUserViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing admin users
+    """
+    queryset = AdminUser.objects.all()
+    serializer_class = AdminUserSerializer
+    
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return AdminUserDetailSerializer
+        return AdminUserSerializer
+    
+    def create(self, request, *args, **kwargs):
+        print(f"AdminUserViewSet.create called with data: {request.data}")
+        
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        try:
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except IntegrityError as e:
+            print(f"IntegrityError: {e}")
+            if 'email' in str(e):
+                return Response(
+                    {"detail": f"Email already in use"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if 'user_id' in str(e):
+                return Response(
+                    {"detail": f"User ID already in use"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            return Response(
+                {"detail": f"Admin user could not be created"},
                 status=status.HTTP_400_BAD_REQUEST
             )
