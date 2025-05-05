@@ -21,6 +21,7 @@ from .serializers import (
     AdminUserSerializer,
     AdminUserDetailSerializer
 )
+from .utils import check_faculty_schedule_conflicts
 
 class CourseViewSet(viewsets.ModelViewSet):
     """
@@ -82,6 +83,16 @@ class ClassSectionViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
+        # Check for faculty schedule conflicts
+        if hasattr(serializer, '_conflicts') and serializer._conflicts:
+            return Response(
+                {
+                    "detail": "Faculty schedule conflict detected",
+                    "conflicts": serializer._conflicts
+                },
+                status=status.HTTP_409_CONFLICT
+            )
+        
         try:
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
@@ -102,6 +113,16 @@ class ClassSectionViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
+        
+        # Check for faculty schedule conflicts
+        if hasattr(serializer, '_conflicts') and serializer._conflicts:
+            return Response(
+                {
+                    "detail": "Faculty schedule conflict detected",
+                    "conflicts": serializer._conflicts
+                },
+                status=status.HTTP_409_CONFLICT
+            )
         
         try:
             self.perform_update(serializer)
@@ -249,6 +270,11 @@ class ScheduleConflictView(APIView):
         # Check for conflicts in the database
         conflicts = []
         
+        # Check for faculty conflicts if faculty_id is provided
+        if faculty_id:
+            faculty_conflicts = check_faculty_schedule_conflicts(day, time, faculty_id, exclude_section_id)
+            conflicts.extend(faculty_conflicts)
+        
         # Get all class sections with the same day, excluding the section being edited if provided
         day_sections = ClassSection.objects.filter(schedule__contains=day)
         
@@ -290,26 +316,17 @@ class ScheduleConflictView(APIView):
                 (section_start < end_time <= section_end)
             )
             
-            if has_time_overlap:
-                # Check for room conflict
-                if section.room == room:
-                    conflicts.append({
-                        "type": "room",
-                        "course": section.course.course_code,
-                        "section": section.section,
-                        "schedule": section.schedule,
-                        "room": section.room
-                    })
-                
-                # Check for faculty conflict
-                if faculty_id and section.faculty and str(section.faculty.id) == str(faculty_id):
-                    conflicts.append({
-                        "type": "faculty",
-                        "course": section.course.course_code,
-                        "section": section.section,
-                        "schedule": section.schedule,
-                        "room": section.room
-                    })
+            if has_time_overlap and section.room == room:
+                # We already checked for faculty conflicts above, so we only need to check for room conflicts here
+                conflict = {
+                    "type": "room",
+                    "course": section.course.course_code,
+                    "section": section.section,
+                    "schedule": section.schedule,
+                    "room": section.room
+                }
+                if conflict not in conflicts:  # Avoid duplicates
+                    conflicts.append(conflict)
         
         if conflicts:
             return Response(

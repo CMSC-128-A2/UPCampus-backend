@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Course, ClassSection, Department, Faculty, AdminUser
+from .utils import check_faculty_schedule_conflicts
 
 class ClassSectionSerializer(serializers.ModelSerializer):
     faculty_name = serializers.SerializerMethodField()
@@ -81,6 +82,20 @@ class ClassSectionCreateSerializer(serializers.ModelSerializer):
         fields = ['id', 'course_code', 'section', 'type', 'room', 'day', 'time', 'schedule', 'faculty_id', 'faculty']
         read_only_fields = ['id', 'schedule', 'faculty']
     
+    def validate(self, data):
+        """Check for faculty schedule conflicts but don't raise an error - this is handled in the view"""
+        day = data.get('day')
+        time = data.get('time')
+        faculty_id = data.get('faculty_id')
+        
+        if faculty_id:
+            conflicts = check_faculty_schedule_conflicts(day, time, faculty_id)
+            if conflicts:
+                # Store the conflicts on the instance for the view to access
+                self._conflicts = conflicts
+        
+        return data
+    
     def create(self, validated_data):
         course_code = validated_data.pop('course_code')
         day = validated_data.pop('day')
@@ -107,14 +122,48 @@ class ClassSectionCreateSerializer(serializers.ModelSerializer):
 
 class ClassSectionUpdateSerializer(serializers.ModelSerializer):
     course_code = serializers.CharField(write_only=True, required=False)
-    day = serializers.CharField(write_only=True)
-    time = serializers.CharField(write_only=True)
+    day = serializers.CharField(write_only=True, required=False)
+    time = serializers.CharField(write_only=True, required=False)
     faculty_id = serializers.IntegerField(write_only=True, required=False)
     
     class Meta:
         model = ClassSection
         fields = ['id', 'course_code', 'section', 'type', 'room', 'day', 'time', 'schedule', 'faculty_id', 'faculty']
         read_only_fields = ['id', 'schedule', 'faculty']
+    
+    def validate(self, data):
+        """Check for faculty schedule conflicts but don't raise an error - this is handled in the view"""
+        day = data.get('day')
+        time = data.get('time')
+        faculty_id = data.get('faculty_id')
+        instance = self.instance
+        
+        # For faculty conflicts, we need either a new faculty_id or we use the existing one
+        if instance and (day is not None or time is not None):
+            # Use existing faculty_id if not provided
+            if faculty_id is None and instance.faculty:
+                faculty_id = instance.faculty.id
+            
+            # Use existing day if not provided
+            if day is None and instance.schedule:
+                parts = instance.schedule.split('|')
+                if len(parts) > 0:
+                    day = parts[0].strip()
+            
+            # Use existing time if not provided
+            if time is None and instance.schedule:
+                parts = instance.schedule.split('|')
+                if len(parts) > 1:
+                    time = parts[1].strip()
+            
+            # Now check for conflicts if we have all the necessary data
+            if faculty_id and day and time:
+                conflicts = check_faculty_schedule_conflicts(day, time, faculty_id, instance.id)
+                if conflicts:
+                    # Store the conflicts on the instance for the view to access
+                    self._conflicts = conflicts
+        
+        return data
     
     def update(self, instance, validated_data):
         # Extract scheduling information
