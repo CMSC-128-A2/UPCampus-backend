@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "corsheaders",
+    "rest_framework",
+    "schedules",
 ]
 
 MIDDLEWARE = [
@@ -58,10 +60,20 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-CSRF_COOKIE_SECURE = True
+# REST Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+}
+
+# CSRF settings
+CSRF_COOKIE_SECURE = False  # Set to False for local development
 CSRF_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SECURE = True
-CSRF_TRUSTED_ORIGINS = ["https://upcampus.vercel.app"]
+SESSION_COOKIE_SECURE = False  # Set to False for local development
+CSRF_TRUSTED_ORIGINS = ["https://upcampus.vercel.app", "http://localhost:3000"]
 
 ROOT_URLCONF = "main.urls"
 
@@ -142,11 +154,11 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles/')
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-# Temporary CORS settings
-
+# CORS settings
 CORS_ALLOWED_ORIGINS = ["https://upcampus.vercel.app"]
 CORS_ALLOWED_ORIGINS_REGEXES = [r"^http://(localhost|127\.0\.0\.1):\d+"]
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True  # For development only
 
 
 STORAGES = {
