@@ -1,9 +1,12 @@
 from django.shortcuts import render
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
+from rest_framework.views import APIView
+from datetime import datetime
+import re
 
 from .models import Course, ClassSection, Department, Faculty, AdminUser
 from .serializers import (
@@ -201,3 +204,120 @@ class AdminUserViewSet(viewsets.ModelViewSet):
                 {"detail": f"Admin user could not be created"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+class ScheduleConflictView(APIView):
+    """
+    API view to check for schedule conflicts
+    """
+    def post(self, request):
+        day = request.data.get('day', '')
+        time = request.data.get('time', '')
+        room = request.data.get('room', '')
+        faculty_id = request.data.get('faculty_id', '')
+        exclude_section_id = request.data.get('exclude_section_id', None)
+        
+        # Validate input
+        if not all([day, time, room]):
+            return Response(
+                {"detail": "Day, time, and room are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Parse the time string to get start and end times
+        # Format: "11:00 AM - 12:00 PM"
+        time_pattern = r"(\d+:\d+\s*[AP]M)\s*-\s*(\d+:\d+\s*[AP]M)"
+        time_match = re.match(time_pattern, time)
+        
+        if not time_match:
+            return Response(
+                {"detail": "Invalid time format. Expected format: '11:00 AM - 12:00 PM'"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        start_time_str, end_time_str = time_match.groups()
+        
+        # Convert to datetime objects for comparison
+        try:
+            start_time = datetime.strptime(start_time_str.strip(), "%I:%M %p")
+            end_time = datetime.strptime(end_time_str.strip(), "%I:%M %p")
+        except ValueError:
+            return Response(
+                {"detail": "Invalid time format"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check for conflicts in the database
+        conflicts = []
+        
+        # Get all class sections with the same day, excluding the section being edited if provided
+        day_sections = ClassSection.objects.filter(schedule__contains=day)
+        
+        # Exclude the section being edited if provided
+        if exclude_section_id:
+            day_sections = day_sections.exclude(id=exclude_section_id)
+        
+        for section in day_sections:
+            # Parse the schedule string (format: "M TH | 11:00 AM - 12:00 PM")
+            section_parts = section.schedule.split('|')
+            if len(section_parts) != 2:
+                continue
+                
+            section_days, section_time = section_parts[0].strip(), section_parts[1].strip()
+            section_day_list = section_days.split()
+            
+            # Skip if the day doesn't match
+            if not any(d in day.split() for d in section_day_list):
+                continue
+            
+            # Check time overlap
+            section_time_match = re.match(time_pattern, section_time)
+            if not section_time_match:
+                continue
+                
+            section_start_str, section_end_str = section_time_match.groups()
+            
+            try:
+                section_start = datetime.strptime(section_start_str.strip(), "%I:%M %p")
+                section_end = datetime.strptime(section_end_str.strip(), "%I:%M %p")
+            except ValueError:
+                continue
+            
+            # Check for time overlap
+            has_time_overlap = (
+                (start_time <= section_start < end_time) or
+                (start_time < section_end <= end_time) or
+                (section_start <= start_time < section_end) or
+                (section_start < end_time <= section_end)
+            )
+            
+            if has_time_overlap:
+                # Check for room conflict
+                if section.room == room:
+                    conflicts.append({
+                        "type": "room",
+                        "course": section.course.course_code,
+                        "section": section.section,
+                        "schedule": section.schedule,
+                        "room": section.room
+                    })
+                
+                # Check for faculty conflict
+                if faculty_id and section.faculty and str(section.faculty.id) == str(faculty_id):
+                    conflicts.append({
+                        "type": "faculty",
+                        "course": section.course.course_code,
+                        "section": section.section,
+                        "schedule": section.schedule,
+                        "room": section.room
+                    })
+        
+        if conflicts:
+            return Response(
+                {
+                    "detail": "Schedule conflict detected",
+                    "conflicts": conflicts
+                },
+                status=status.HTTP_409_CONFLICT
+            )
+        
+        return Response({"detail": "No conflicts found"}, status=status.HTTP_200_OK)
