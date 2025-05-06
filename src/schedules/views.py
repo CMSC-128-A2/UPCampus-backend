@@ -199,6 +199,35 @@ class AdminUserViewSet(viewsets.ModelViewSet):
             return AdminUserDetailSerializer
         return AdminUserSerializer
     
+    @action(detail=False, methods=['post'], url_path='authenticate')
+    def authenticate(self, request):
+        """Authenticate an admin user"""
+        user_id = request.data.get('user_id')
+        password = request.data.get('password')
+        
+        if not user_id or not password:
+            return Response(
+                {"detail": "User ID and password are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            admin = AdminUser.objects.get(user_id=user_id)
+            if admin.password == password:
+                # Return admin details without password
+                serializer = AdminUserSerializer(admin)
+                return Response(serializer.data)
+            else:
+                return Response(
+                    {"detail": "Invalid credentials"},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+        except AdminUser.DoesNotExist:
+            return Response(
+                {"detail": "Invalid credentials"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+    
     def create(self, request, *args, **kwargs):
         print(f"AdminUserViewSet.create called with data: {request.data}")
         
