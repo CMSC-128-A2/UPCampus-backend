@@ -40,7 +40,7 @@ class FacultySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Faculty
-        fields = ['id', 'name', 'department', 'department_name']
+        fields = ['id', 'name', 'email', 'department', 'department_name']
         read_only_fields = ['id']
     
     def get_department_name(self, obj):
@@ -52,7 +52,7 @@ class FacultyDetailSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Faculty
-        fields = ['id', 'name', 'department', 'department_name', 'class_sections', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'email', 'department', 'department_name', 'class_sections', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def get_department_name(self, obj):
