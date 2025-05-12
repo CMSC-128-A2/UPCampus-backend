@@ -21,7 +21,7 @@ from .serializers import (
     AdminUserSerializer,
     AdminUserDetailSerializer
 )
-from .utils import check_faculty_schedule_conflicts
+from .utils import check_schedule_conflicts
 
 class CourseViewSet(viewsets.ModelViewSet):
     """
@@ -301,7 +301,7 @@ class ScheduleConflictView(APIView):
         
         # Check for faculty conflicts if faculty_id is provided
         if faculty_id:
-            faculty_conflicts = check_faculty_schedule_conflicts(day, time, faculty_id, exclude_section_id)
+            faculty_conflicts = check_schedule_conflicts(day, time, faculty_id, room, exclude_section_id)
             conflicts.extend(faculty_conflicts)
         
         # Get all class sections with the same day, excluding the section being edited if provided
