@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import RegexValidator
 
 # Create your models here.
 
@@ -29,6 +30,16 @@ class Department(models.Model):
 class Faculty(models.Model):
     """Model representing a faculty member or professor"""
     name = models.CharField(max_length=100)
+    email = models.EmailField(
+        validators=[
+            RegexValidator(
+                regex=r'^[\w\.-]+@up\.edu\.ph$',
+                message='Email must be in the format: "example@up.edu.ph"',
+                code='invalid_email'
+            )
+        ],
+        unique=True
+    )
     department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='faculty_members')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
