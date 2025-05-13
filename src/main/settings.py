@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework",
     "schedules",
+    "ai",
 ]
 
 MIDDLEWARE = [
