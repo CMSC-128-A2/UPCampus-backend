@@ -4,7 +4,7 @@ class QueryValidator:
         
     def _validate(self):
         self._check_prompt_injection()
-        self._validate_prompt_privacy()
+        self._check_privacy()
         
     def _check_prompt_injection(self):
         pass
