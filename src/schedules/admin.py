@@ -26,9 +26,9 @@ class DepartmentAdmin(admin.ModelAdmin):
 
 @admin.register(Faculty)
 class FacultyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'department', 'created_at')
+    list_display = ('name', 'email', 'department', 'created_at')
     list_filter = ('department',)
-    search_fields = ('name',)
+    search_fields = ('name', 'email')
     autocomplete_fields = ('department',)
 
 @admin.register(AdminUser)

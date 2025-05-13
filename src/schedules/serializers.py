@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Course, ClassSection, Department, Faculty, AdminUser
-from .utils import check_faculty_schedule_conflicts
+from .utils import check_schedule_conflicts
 
 class ClassSectionSerializer(serializers.ModelSerializer):
     faculty_name = serializers.SerializerMethodField()
@@ -40,7 +40,7 @@ class FacultySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Faculty
-        fields = ['id', 'name', 'department', 'department_name']
+        fields = ['id', 'name', 'email', 'department', 'department_name']
         read_only_fields = ['id']
     
     def get_department_name(self, obj):
@@ -52,7 +52,7 @@ class FacultyDetailSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Faculty
-        fields = ['id', 'name', 'department', 'department_name', 'class_sections', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'email', 'department', 'department_name', 'class_sections', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def get_department_name(self, obj):
@@ -71,6 +71,23 @@ class AdminUserDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'email', 'user_id', 'password', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+from rest_framework import serializers
+from .models import Course, ClassSection, Department, Faculty, AdminUser
+from .utils import check_schedule_conflicts  # Use the new function name
+
+class ClassSectionSerializer(serializers.ModelSerializer):
+    faculty_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ClassSection
+        fields = ['id', 'section', 'type', 'room', 'schedule', 'faculty', 'faculty_name']
+        read_only_fields = ['id']
+    
+    def get_faculty_name(self, obj):
+        return obj.faculty.name if obj.faculty else None
+
+# Other serializers remain unchanged
+
 class ClassSectionCreateSerializer(serializers.ModelSerializer):
     course_code = serializers.CharField(write_only=True)
     day = serializers.CharField(write_only=True)
@@ -83,13 +100,21 @@ class ClassSectionCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'schedule', 'faculty']
     
     def validate(self, data):
-        """Check for faculty schedule conflicts but don't raise an error - this is handled in the view"""
+        """Check for faculty and room schedule conflicts but don't raise an error - this is handled in the view"""
         day = data.get('day')
         time = data.get('time')
         faculty_id = data.get('faculty_id')
+        room = data.get('room')
         
-        if faculty_id:
-            conflicts = check_faculty_schedule_conflicts(day, time, faculty_id)
+        # Only check for conflicts if we have the necessary data
+        if day and time and (faculty_id or room):
+            conflicts = check_schedule_conflicts(
+                day=day, 
+                time=time, 
+                faculty_id=faculty_id, 
+                room=room
+            )
+            
             if conflicts:
                 # Store the conflicts on the instance for the view to access
                 self._conflicts = conflicts
@@ -132,33 +157,42 @@ class ClassSectionUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'schedule', 'faculty']
     
     def validate(self, data):
-        """Check for faculty schedule conflicts but don't raise an error - this is handled in the view"""
+        """Check for faculty and room schedule conflicts but don't raise an error - this is handled in the view"""
         day = data.get('day')
         time = data.get('time')
         faculty_id = data.get('faculty_id')
+        room = data.get('room')
         instance = self.instance
         
-        # For faculty conflicts, we need either a new faculty_id or we use the existing one
-        if instance and (day is not None or time is not None):
-            # Use existing faculty_id if not provided
+        # We need to check for conflicts if any scheduling-related field is changing
+        if instance and (day is not None or time is not None or room is not None):
+            # Use existing values for any missing fields
             if faculty_id is None and instance.faculty:
                 faculty_id = instance.faculty.id
             
-            # Use existing day if not provided
             if day is None and instance.schedule:
                 parts = instance.schedule.split('|')
                 if len(parts) > 0:
                     day = parts[0].strip()
             
-            # Use existing time if not provided
             if time is None and instance.schedule:
                 parts = instance.schedule.split('|')
                 if len(parts) > 1:
                     time = parts[1].strip()
             
+            if room is None:
+                room = instance.room
+            
             # Now check for conflicts if we have all the necessary data
-            if faculty_id and day and time:
-                conflicts = check_faculty_schedule_conflicts(day, time, faculty_id, instance.id)
+            if day and time and (faculty_id or room):
+                conflicts = check_schedule_conflicts(
+                    day=day, 
+                    time=time, 
+                    faculty_id=faculty_id, 
+                    room=room,
+                    exclude_section_id=instance.id
+                )
+                
                 if conflicts:
                     # Store the conflicts on the instance for the view to access
                     self._conflicts = conflicts
@@ -194,4 +228,4 @@ class ClassSectionUpdateSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         
         instance.save()
-        return instance 
+        return instance
