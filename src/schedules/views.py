@@ -367,3 +367,117 @@ class ScheduleConflictView(APIView):
             )
         
         return Response({"detail": "No conflicts found"}, status=status.HTTP_200_OK)
+
+class RoomSchedulesView(APIView):
+    """
+    API view to get all schedules for a specific room
+    """
+    def get(self, request, room=None):
+        if not room:
+            return Response(
+                {"detail": "Room parameter is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get all class sections for this room
+        sections = ClassSection.objects.filter(room__iexact=room).select_related('course', 'faculty')
+        
+        if not sections.exists():
+            return Response(
+                {"detail": f"No schedules found for room {room}"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        serializer = ClassSectionSerializer(sections, many=True)
+        return Response(serializer.data)
+    
+# Add to src/schedules/views.py
+class RoomsListView(APIView):
+    """
+    API view to get a list of all rooms with schedules
+    """
+    def get(self, request):
+        # Get distinct rooms from class sections
+        rooms = ClassSection.objects.values_list('room', flat=True).distinct()
+        
+        # Convert to a list and sort
+        rooms_list = sorted(list(rooms))
+        
+        return Response({"rooms": rooms_list})
+    
+# Add to src/schedules/views.py
+class RoomSchedulesByDayView(APIView):
+    """
+    API view to get schedules for a specific room, grouped by day
+    """
+    def get(self, request, room=None):
+        if not room:
+            return Response(
+                {"detail": "Room parameter is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get all class sections for this room
+        sections = ClassSection.objects.filter(room__iexact=room).select_related('course', 'faculty')
+        
+        if not sections.exists():
+            return Response(
+                {"detail": f"No schedules found for room {room}"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Group sections by day
+        schedules_by_day = {}
+        
+        for section in sections:
+            # Extract days from schedule string (format: "M TH | 11:00 AM - 12:00 PM")
+            schedule_parts = section.schedule.split('|')
+            if len(schedule_parts) > 0:
+                days = schedule_parts[0].strip().split()
+                
+                # Add section to each day it occurs on
+                for day in days:
+                    if day not in schedules_by_day:
+                        schedules_by_day[day] = []
+                    
+                    serializer = ClassSectionSerializer(section)
+                    schedules_by_day[day].append(serializer.data)
+        
+        # Sort each day's schedules by time
+        for day in schedules_by_day:
+            schedules_by_day[day] = sorted(
+                schedules_by_day[day],
+                key=lambda x: self._extract_start_time(x['schedule'])
+            )
+        
+        # Order days in a logical sequence: M, T, W, TH, F, S, SU
+        day_order = {'M': 0, 'T': 1, 'W': 2, 'TH': 3, 'F': 4, 'S': 5, 'SU': 6}
+        ordered_schedules = {
+            day: schedules_by_day[day]
+            for day in sorted(schedules_by_day.keys(), key=lambda d: day_order.get(d, 99))
+        }
+        
+        return Response({
+            "room": room,
+            "schedules_by_day": ordered_schedules
+        })
+    
+    def _extract_start_time(self, schedule):
+        """Extract the start time for sorting purposes"""
+        try:
+            time_part = schedule.split('|')[1].strip()
+            time_range = time_part.split('-')[0].strip()
+            
+            # Convert "11:00 AM" to minutes for sorting
+            parts = time_range.split(':')
+            hour = int(parts[0])
+            minute = int(parts[1].split(' ')[0])
+            
+            # Adjust for PM
+            if 'PM' in time_range and hour < 12:
+                hour += 12
+            
+            # Convert to minutes since midnight
+            return hour * 60 + minute
+        except (IndexError, ValueError):
+            return 0
