@@ -163,8 +163,24 @@ class FacultyViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing faculty members
     """
-    queryset = Faculty.objects.all().select_related('department').prefetch_related('class_sections')
+    queryset = Faculty.objects.all()
     serializer_class = FacultySerializer
+    
+    def get_queryset(self):
+        queryset = Faculty.objects.all()
+        
+        # Get the admin user from the request
+        admin_id = self.request.query_params.get('admin_id')
+        if admin_id:
+            try:
+                admin = AdminUser.objects.get(id=admin_id)
+                # If admin is not a superuser, filter by department
+                if not admin.is_superuser and admin.department:
+                    queryset = queryset.filter(department=admin.department)
+            except AdminUser.DoesNotExist:
+                pass
+        
+        return queryset
     
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -186,6 +202,23 @@ class FacultyViewSet(viewsets.ModelViewSet):
         sections = faculty.class_sections.all().select_related('course')
         serializer = ClassSectionSerializer(sections, many=True)
         return Response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        print(f"FacultyViewSet.create called with data: {request.data}")
+        
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        try:
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except IntegrityError:
+            email = request.data.get('email')
+            return Response(
+                {"detail": f"Faculty with email {email} already exists"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class AdminUserViewSet(viewsets.ModelViewSet):
     """

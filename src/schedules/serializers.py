@@ -59,17 +59,27 @@ class FacultyDetailSerializer(serializers.ModelSerializer):
         return obj.department.name
 
 class AdminUserSerializer(serializers.ModelSerializer):
+    department_name = serializers.SerializerMethodField()
+    
     class Meta:
         model = AdminUser
-        fields = ['id', 'name', 'email', 'user_id', 'password']
+        fields = ['id', 'name', 'email', 'user_id', 'password', 'department', 'department_name', 'is_superuser']
         read_only_fields = ['id']
         extra_kwargs = {'password': {'write_only': True}}
+    
+    def get_department_name(self, obj):
+        return obj.department.name if obj.department else None
 
 class AdminUserDetailSerializer(serializers.ModelSerializer):
+    department_name = serializers.SerializerMethodField()
+    
     class Meta:
         model = AdminUser
-        fields = ['id', 'name', 'email', 'user_id', 'password', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'email', 'user_id', 'password', 'department', 'department_name', 'is_superuser', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_department_name(self, obj):
+        return obj.department.name if obj.department else None
 
 from rest_framework import serializers
 from .models import Course, ClassSection, Department, Faculty, AdminUser

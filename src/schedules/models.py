@@ -58,6 +58,8 @@ class AdminUser(models.Model):
     email = models.EmailField(unique=True)
     user_id = models.CharField(max_length=50, unique=True)
     password = models.CharField(max_length=100)  # In production, this should use proper password hashing
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='admin_users')
+    is_superuser = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
