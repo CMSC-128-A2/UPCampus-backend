@@ -26,13 +26,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-1k2eh-^_y5x4zjx1b!w)v^8(!&c=9%0$c(*sp8m3k_zertl#*!")
+SECRET_KEY = os.getenv("SECRET_KEY", "secret")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "True") == "True"
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+FRONTEND_HOST = os.getenv("FRONTEND_HOST", "http://localhost:3000")
+BACKEND_HOST = os.getenv("BACKEND_HOST", "http://localhost:8000")
 
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"] if DEBUG else [FRONTEND_HOST, BACKEND_HOST]
 
 # Application definition
 
@@ -67,13 +69,21 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day',
+    },
 }
 
 # CSRF settings
 CSRF_COOKIE_SECURE = False  # Set to False for local development
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = False  # Set to False for local development
-CSRF_TRUSTED_ORIGINS = ["https://upcampus.vercel.app", "http://localhost:3000"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:3000"] if DEBUG else [FRONTEND_HOST, BACKEND_HOST]
 
 ROOT_URLCONF = "main.urls"
 
@@ -155,8 +165,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = ["https://upcampus.vercel.app"]
-CORS_ALLOWED_ORIGINS_REGEXES = [r"^http://(localhost|127\.0\.0\.1):\d+"]
+CORS_ALLOWED_ORIGINS = ['http://localhost:3000'] if DEBUG else [FRONTEND_HOST, BACKEND_HOST]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True  # For development only
 
