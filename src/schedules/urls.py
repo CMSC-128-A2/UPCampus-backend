@@ -6,6 +6,7 @@ from .views import (
     DepartmentViewSet, 
     FacultyViewSet, 
     AdminUserViewSet,
+    RoomViewSet,
     ScheduleConflictView
 )
 
@@ -15,6 +16,7 @@ router.register(r'sections', ClassSectionViewSet)
 router.register(r'departments', DepartmentViewSet)
 router.register(r'faculty', FacultyViewSet)
 router.register(r'admins', AdminUserViewSet)
+router.register(r'rooms', RoomViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

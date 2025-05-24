@@ -2,7 +2,7 @@ from datetime import datetime
 import re
 from .models import ClassSection
 
-def check_schedule_conflicts(day, time, faculty_id=None, room=None, exclude_section_id=None):
+def check_schedule_conflicts(day, time, faculty_id=None, room_id=None, exclude_section_id=None):
     """
     Helper function to check for faculty and room schedule conflicts
     Returns a list of conflicts or empty list if no conflicts exist
@@ -11,13 +11,13 @@ def check_schedule_conflicts(day, time, faculty_id=None, room=None, exclude_sect
     - day: String containing space-separated days (e.g., "M T")
     - time: String in format "11:00 AM - 12:00 PM"
     - faculty_id: Optional ID of the faculty to check conflicts for
-    - room: Optional room name to check conflicts for
+    - room_id: Optional ID of the room to check conflicts for
     - exclude_section_id: Optional ID of section to exclude from conflict check
     
     Returns:
     - List of conflict dictionaries with type "faculty" or "room"
     """
-    if not day or not time or (faculty_id is None and room is None):
+    if not day or not time or (faculty_id is None and room_id is None):
         return []
     
     # Split input days into individual days
@@ -63,10 +63,10 @@ def check_schedule_conflicts(day, time, faculty_id=None, room=None, exclude_sect
         )
         conflicts.extend(faculty_conflicts)
     
-    # Check for room conflicts if room is provided
-    if room:
+    # Check for room conflicts if room_id is provided
+    if room_id:
         room_conflicts = check_entity_conflicts(
-            sections_query.filter(room=room),
+            sections_query.filter(room_id=room_id),
             input_days,
             start_time,
             end_time,
@@ -139,7 +139,7 @@ def check_entity_conflicts(sections, input_days, start_time, end_time, time_patt
                     "course": section.course.course_code,
                     "section": section.section,
                     "schedule": section.schedule,
-                    "room": section.room,
+                    "room": str(section.room) if section.room else None,
                     "conflict_day": input_day  # Added for clarity in error messages
                 }
                 

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Course, ClassSection, Department, Faculty, AdminUser
+from .models import Course, ClassSection, Department, Faculty, AdminUser, Room
 
 class ClassSectionInline(admin.TabularInline):
     model = ClassSection
@@ -12,12 +12,18 @@ class CourseAdmin(admin.ModelAdmin):
     search_fields = ('course_code',)
     inlines = [ClassSectionInline]
 
+@admin.register(Room)
+class RoomAdmin(admin.ModelAdmin):
+    list_display = ('room', 'floor', 'created_at', 'updated_at')
+    search_fields = ('room', 'floor')
+    list_filter = ('floor',)
+
 @admin.register(ClassSection)
 class ClassSectionAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'course', 'section', 'type', 'room', 'faculty', 'schedule')
     list_filter = ('course', 'type')
-    search_fields = ('course__course_code', 'section', 'room', 'schedule')
-    autocomplete_fields = ('course', 'faculty')
+    search_fields = ('course__course_code', 'section', 'room__room', 'schedule')
+    autocomplete_fields = ('course', 'faculty', 'room')
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):

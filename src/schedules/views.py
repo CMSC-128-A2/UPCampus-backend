@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from datetime import datetime
 import re
 
-from .models import Course, ClassSection, Department, Faculty, AdminUser
+from .models import Course, ClassSection, Department, Faculty, AdminUser, Room
 from .serializers import (
     CourseSerializer,
     CourseDetailSerializer,
@@ -19,7 +19,8 @@ from .serializers import (
     FacultySerializer,
     FacultyDetailSerializer,
     AdminUserSerializer,
-    AdminUserDetailSerializer
+    AdminUserDetailSerializer,
+    RoomSerializer
 )
 from .utils import check_schedule_conflicts
 
@@ -61,6 +62,31 @@ class CourseViewSet(viewsets.ModelViewSet):
             return Response(
                 {"detail": "Section not found"}, 
                 status=status.HTTP_404_NOT_FOUND
+            )
+
+class RoomViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing rooms
+    """
+    queryset = Room.objects.all()
+    serializer_class = RoomSerializer
+    
+    def create(self, request, *args, **kwargs):
+        print(f"RoomViewSet.create called with data: {request.data}")
+        
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        try:
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except IntegrityError:
+            room = request.data.get('room')
+            floor = request.data.get('floor')
+            return Response(
+                {"detail": f"Room {room} on floor {floor} already exists"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
 class ClassSectionViewSet(viewsets.ModelViewSet):

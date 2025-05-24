@@ -27,6 +27,21 @@ class Department(models.Model):
         ordering = ['name']
 
 
+class Room(models.Model):
+    """Model representing a room"""
+    room = models.CharField(max_length=50)
+    floor = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.room}"
+
+    class Meta:
+        ordering = ['room']
+        unique_together = ['room', 'floor']
+
+
 class Faculty(models.Model):
     """Model representing a faculty member or professor"""
     name = models.CharField(max_length=100)
@@ -83,7 +98,7 @@ class ClassSection(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='sections')
     section = models.CharField(max_length=10)
     type = models.CharField(max_length=20, choices=SECTION_TYPE_CHOICES, default=LECTURE)
-    room = models.CharField(max_length=50)
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='class_sections')
     schedule = models.CharField(max_length=100)  # Format: "M TH | 11:00 AM - 12:00 PM"
     faculty = models.ForeignKey(Faculty, on_delete=models.SET_NULL, null=True, blank=True, related_name='class_sections')
     created_at = models.DateTimeField(auto_now_add=True)
