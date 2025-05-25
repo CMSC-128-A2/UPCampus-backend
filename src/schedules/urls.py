@@ -7,7 +7,8 @@ from .views import (
     FacultyViewSet, 
     AdminUserViewSet,
     RoomViewSet,
-    ScheduleConflictView
+    ScheduleConflictView,
+    NewSemesterView
 )
 
 router = DefaultRouter()
@@ -21,4 +22,5 @@ router.register(r'rooms', RoomViewSet)
 urlpatterns = [
     path('', include(router.urls)),
     path('conflicts/check/', ScheduleConflictView.as_view(), name='check-conflicts'),
+    path('new-semester/', NewSemesterView.as_view(), name='new-semester'),
 ] 

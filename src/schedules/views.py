@@ -121,8 +121,12 @@ class ClassSectionViewSet(viewsets.ModelViewSet):
         
         try:
             self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            
+            # Return the created instance using ClassSectionSerializer to include room_display
+            instance = serializer.instance
+            response_serializer = ClassSectionSerializer(instance)
+            headers = self.get_success_headers(response_serializer.data)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         except IntegrityError:
             course_code = request.data.get('course_code')
             section = request.data.get('section')
@@ -152,7 +156,11 @@ class ClassSectionViewSet(viewsets.ModelViewSet):
         
         try:
             self.perform_update(serializer)
-            return Response(serializer.data)
+            
+            # Return the updated instance using ClassSectionSerializer to include room_display
+            instance = serializer.instance
+            response_serializer = ClassSectionSerializer(instance)
+            return Response(response_serializer.data)
         except IntegrityError:
             course_code = request.data.get('course_code')
             section = request.data.get('section')
@@ -426,3 +434,30 @@ class ScheduleConflictView(APIView):
             )
         
         return Response({"detail": "No conflicts found"}, status=status.HTTP_200_OK)
+
+class NewSemesterView(APIView):
+    """
+    API view to reset data for a new semester
+    Deletes all class sections (schedules) but keeps rooms and courses
+    """
+    def post(self, request):
+        try:
+            # Delete all class sections (this removes all schedules)
+            deleted_count = ClassSection.objects.all().count()
+            ClassSection.objects.all().delete()
+            
+            print(f"New semester reset: Deleted {deleted_count} class sections")
+            
+            return Response(
+                {
+                    "detail": f"New semester started successfully. Deleted {deleted_count} schedules.",
+                    "deleted_schedules": deleted_count
+                },
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            print(f"Error during new semester reset: {e}")
+            return Response(
+                {"detail": "Failed to start new semester. Please try again."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
