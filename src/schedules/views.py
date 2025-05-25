@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from datetime import datetime
 import re
 
-from .models import Course, ClassSection, Department, Faculty, AdminUser
+from .models import Course, ClassSection, Department, Faculty, AdminUser, Room
 from .serializers import (
     CourseSerializer,
     CourseDetailSerializer,
@@ -19,7 +19,8 @@ from .serializers import (
     FacultySerializer,
     FacultyDetailSerializer,
     AdminUserSerializer,
-    AdminUserDetailSerializer
+    AdminUserDetailSerializer,
+    RoomSerializer
 )
 from .utils import check_schedule_conflicts
 
@@ -63,6 +64,31 @@ class CourseViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+class RoomViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing rooms
+    """
+    queryset = Room.objects.all()
+    serializer_class = RoomSerializer
+    
+    def create(self, request, *args, **kwargs):
+        print(f"RoomViewSet.create called with data: {request.data}")
+        
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        try:
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except IntegrityError:
+            room = request.data.get('room')
+            floor = request.data.get('floor')
+            return Response(
+                {"detail": f"Room {room} on floor {floor} already exists"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
 class ClassSectionViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing class sections
@@ -95,8 +121,12 @@ class ClassSectionViewSet(viewsets.ModelViewSet):
         
         try:
             self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            
+            # Return the created instance using ClassSectionSerializer to include room_display
+            instance = serializer.instance
+            response_serializer = ClassSectionSerializer(instance)
+            headers = self.get_success_headers(response_serializer.data)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         except IntegrityError:
             course_code = request.data.get('course_code')
             section = request.data.get('section')
@@ -126,7 +156,11 @@ class ClassSectionViewSet(viewsets.ModelViewSet):
         
         try:
             self.perform_update(serializer)
-            return Response(serializer.data)
+            
+            # Return the updated instance using ClassSectionSerializer to include room_display
+            instance = serializer.instance
+            response_serializer = ClassSectionSerializer(instance)
+            return Response(response_serializer.data)
         except IntegrityError:
             course_code = request.data.get('course_code')
             section = request.data.get('section')
@@ -400,3 +434,30 @@ class ScheduleConflictView(APIView):
             )
         
         return Response({"detail": "No conflicts found"}, status=status.HTTP_200_OK)
+
+class NewSemesterView(APIView):
+    """
+    API view to reset data for a new semester
+    Deletes all class sections (schedules) but keeps rooms and courses
+    """
+    def post(self, request):
+        try:
+            # Delete all class sections (this removes all schedules)
+            deleted_count = ClassSection.objects.all().count()
+            ClassSection.objects.all().delete()
+            
+            print(f"New semester reset: Deleted {deleted_count} class sections")
+            
+            return Response(
+                {
+                    "detail": f"New semester started successfully. Deleted {deleted_count} schedules.",
+                    "deleted_schedules": deleted_count
+                },
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            print(f"Error during new semester reset: {e}")
+            return Response(
+                {"detail": "Failed to start new semester. Please try again."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

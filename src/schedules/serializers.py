@@ -1,17 +1,27 @@
 from rest_framework import serializers
-from .models import Course, ClassSection, Department, Faculty, AdminUser
+from .models import Course, ClassSection, Department, Faculty, AdminUser, Room
 from .utils import check_schedule_conflicts
+
+class RoomSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Room
+        fields = ['id', 'room', 'floor']
+        read_only_fields = ['id']
 
 class ClassSectionSerializer(serializers.ModelSerializer):
     faculty_name = serializers.SerializerMethodField()
+    room_display = serializers.SerializerMethodField()
     
     class Meta:
         model = ClassSection
-        fields = ['id', 'section', 'type', 'room', 'schedule', 'faculty', 'faculty_name']
+        fields = ['id', 'section', 'type', 'room', 'room_display', 'schedule', 'faculty', 'faculty_name']
         read_only_fields = ['id']
     
     def get_faculty_name(self, obj):
         return obj.faculty.name if obj.faculty else None
+    
+    def get_room_display(self, obj):
+        return str(obj.room) if obj.room else None
 
 class CourseSerializer(serializers.ModelSerializer):
     sections = ClassSectionSerializer(many=True, read_only=True)
@@ -81,48 +91,32 @@ class AdminUserDetailSerializer(serializers.ModelSerializer):
     def get_department_name(self, obj):
         return obj.department.name if obj.department else None
 
-from rest_framework import serializers
-from .models import Course, ClassSection, Department, Faculty, AdminUser
-from .utils import check_schedule_conflicts  # Use the new function name
-
-class ClassSectionSerializer(serializers.ModelSerializer):
-    faculty_name = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = ClassSection
-        fields = ['id', 'section', 'type', 'room', 'schedule', 'faculty', 'faculty_name']
-        read_only_fields = ['id']
-    
-    def get_faculty_name(self, obj):
-        return obj.faculty.name if obj.faculty else None
-
-# Other serializers remain unchanged
-
 class ClassSectionCreateSerializer(serializers.ModelSerializer):
     course_code = serializers.CharField(write_only=True)
     day = serializers.CharField(write_only=True)
     time = serializers.CharField(write_only=True)
     faculty_id = serializers.IntegerField(write_only=True, required=False)
+    room_id = serializers.IntegerField(write_only=True)
     
     class Meta:
         model = ClassSection
-        fields = ['id', 'course_code', 'section', 'type', 'room', 'day', 'time', 'schedule', 'faculty_id', 'faculty']
-        read_only_fields = ['id', 'schedule', 'faculty']
+        fields = ['id', 'course_code', 'section', 'type', 'room_id', 'day', 'time', 'schedule', 'faculty_id', 'faculty', 'room']
+        read_only_fields = ['id', 'schedule', 'faculty', 'room']
     
     def validate(self, data):
         """Check for faculty and room schedule conflicts but don't raise an error - this is handled in the view"""
         day = data.get('day')
         time = data.get('time')
         faculty_id = data.get('faculty_id')
-        room = data.get('room')
+        room_id = data.get('room_id')
         
         # Only check for conflicts if we have the necessary data
-        if day and time and (faculty_id or room):
+        if day and time and (faculty_id or room_id):
             conflicts = check_schedule_conflicts(
                 day=day, 
                 time=time, 
                 faculty_id=faculty_id, 
-                room=room
+                room_id=room_id
             )
             
             if conflicts:
@@ -136,6 +130,7 @@ class ClassSectionCreateSerializer(serializers.ModelSerializer):
         day = validated_data.pop('day')
         time = validated_data.pop('time')
         faculty_id = validated_data.pop('faculty_id', None)
+        room_id = validated_data.pop('room_id')
         
         # Create the schedule string format
         schedule_string = f"{day} | {time}"
@@ -144,6 +139,13 @@ class ClassSectionCreateSerializer(serializers.ModelSerializer):
         # Get or create the course
         course, _ = Course.objects.get_or_create(course_code=course_code)
         validated_data['course'] = course
+        
+        # Set room
+        try:
+            room = Room.objects.get(id=room_id)
+            validated_data['room'] = room
+        except Room.DoesNotExist:
+            raise serializers.ValidationError("Room not found")
         
         # Set faculty if provided
         if faculty_id:
@@ -160,22 +162,23 @@ class ClassSectionUpdateSerializer(serializers.ModelSerializer):
     day = serializers.CharField(write_only=True, required=False)
     time = serializers.CharField(write_only=True, required=False)
     faculty_id = serializers.IntegerField(write_only=True, required=False)
+    room_id = serializers.IntegerField(write_only=True, required=False)
     
     class Meta:
         model = ClassSection
-        fields = ['id', 'course_code', 'section', 'type', 'room', 'day', 'time', 'schedule', 'faculty_id', 'faculty']
-        read_only_fields = ['id', 'schedule', 'faculty']
+        fields = ['id', 'course_code', 'section', 'type', 'room_id', 'day', 'time', 'schedule', 'faculty_id', 'faculty', 'room']
+        read_only_fields = ['id', 'schedule', 'faculty', 'room']
     
     def validate(self, data):
         """Check for faculty and room schedule conflicts but don't raise an error - this is handled in the view"""
         day = data.get('day')
         time = data.get('time')
         faculty_id = data.get('faculty_id')
-        room = data.get('room')
+        room_id = data.get('room_id')
         instance = self.instance
         
         # We need to check for conflicts if any scheduling-related field is changing
-        if instance and (day is not None or time is not None or room is not None):
+        if instance and (day is not None or time is not None or room_id is not None):
             # Use existing values for any missing fields
             if faculty_id is None and instance.faculty:
                 faculty_id = instance.faculty.id
@@ -190,16 +193,16 @@ class ClassSectionUpdateSerializer(serializers.ModelSerializer):
                 if len(parts) > 1:
                     time = parts[1].strip()
             
-            if room is None:
-                room = instance.room
+            if room_id is None:
+                room_id = instance.room.id if instance.room else None
             
             # Now check for conflicts if we have all the necessary data
-            if day and time and (faculty_id or room):
+            if day and time and (faculty_id or room_id):
                 conflicts = check_schedule_conflicts(
                     day=day, 
                     time=time, 
                     faculty_id=faculty_id, 
-                    room=room,
+                    room_id=room_id,
                     exclude_section_id=instance.id
                 )
                 
@@ -223,6 +226,15 @@ class ClassSectionUpdateSerializer(serializers.ModelSerializer):
         if course_code is not None:
             course, _ = Course.objects.get_or_create(course_code=course_code)
             instance.course = course
+        
+        # Set room if provided
+        room_id = validated_data.pop('room_id', None)
+        if room_id is not None:
+            try:
+                room = Room.objects.get(id=room_id)
+                instance.room = room
+            except Room.DoesNotExist:
+                pass
         
         # Set faculty if provided
         faculty_id = validated_data.pop('faculty_id', None)
