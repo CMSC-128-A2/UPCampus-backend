@@ -34,7 +34,7 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 FRONTEND_HOST = os.getenv("FRONTEND_HOST", "http://localhost:3000")
 BACKEND_HOST = os.getenv("BACKEND_HOST", "http://localhost:8000")
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"] if DEBUG else [FRONTEND_HOST, BACKEND_HOST]
+ALLOWED_HOSTS = ["http://localhost", "http://127.0.0.1"] if DEBUG else [FRONTEND_HOST.replace("http://", "").replace("https://", ""), BACKEND_HOST.replace("http://", "").replace("https://", "")]
 
 # Application definition
 
@@ -83,7 +83,7 @@ REST_FRAMEWORK = {
 CSRF_COOKIE_SECURE = False  # Set to False for local development
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = False  # Set to False for local development
-CSRF_TRUSTED_ORIGINS = ["http://localhost:3000"] if DEBUG else [FRONTEND_HOST, BACKEND_HOST]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"] if DEBUG else [FRONTEND_HOST, BACKEND_HOST]
 
 ROOT_URLCONF = "main.urls"
 
@@ -165,7 +165,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = ['http://localhost:3000'] if DEBUG else [FRONTEND_HOST, BACKEND_HOST]
+CORS_ALLOWED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"] if DEBUG else [FRONTEND_HOST, BACKEND_HOST]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True  # For development only
 
