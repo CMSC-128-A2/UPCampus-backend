@@ -169,9 +169,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000", "https://upsee.sheldonarthursagrado.site", "https://j4cugpg9vh.ap-southeast-1.awsapprunner.com"]
+CORS_ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:8000", "http://127.0.0.1:3000", "https://upsee.sheldonarthursagrado.site", "https://j4cugpg9vh.ap-southeast-1.awsapprunner.com", "http://169.254.172.2"]
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # For development only
+CORS_ALLOW_ALL_ORIGINS = False  # For development only
 
 
 STORAGES = {
