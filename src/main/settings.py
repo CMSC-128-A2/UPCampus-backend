@@ -34,7 +34,7 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = [
     "localhost", "127.0.0.1", "upsee.sheldonarthursagrado.site", "j4cugpg9vh.ap-southeast-1.awsapprunner.com",
-    "kzpqqzpeyj.ap-southeast-1.awsapprunner.com"
+    "kzpqqzpeyj.ap-southeast-1.awsapprunner.com", "169.254.172.2"
 ]
 
 # Application definition
