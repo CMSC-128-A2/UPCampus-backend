@@ -34,7 +34,7 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 FRONTEND_HOST = os.getenv("FRONTEND_HOST", "http://localhost:3000")
 BACKEND_HOST = os.getenv("BACKEND_HOST", "http://localhost:8000")
 
-ALLOWED_HOSTS = ["http://localhost", "http://127.0.0.1"] if DEBUG else [FRONTEND_HOST.replace("http://", "").replace("https://", ""), BACKEND_HOST.replace("http://", "").replace("https://", "")]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "https://upsee.sheldonarthursagrado.site", "https://j4cugpg9vh.ap-southeast-1.awsapprunner.com"] if DEBUG else [FRONTEND_HOST.replace("http://", "").replace("https://", ""), BACKEND_HOST.replace("http://", "").replace("https://", "")]
 
 # Application definition
 
