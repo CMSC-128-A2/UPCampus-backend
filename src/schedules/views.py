@@ -20,7 +20,8 @@ from .serializers import (
     FacultyDetailSerializer,
     AdminUserSerializer,
     AdminUserDetailSerializer,
-    RoomSerializer
+    RoomSerializer,
+    RoomClassSectionSerializer
 )
 from .utils import check_schedule_conflicts
 
@@ -70,6 +71,7 @@ class RoomViewSet(viewsets.ModelViewSet):
     """
     queryset = Room.objects.all()
     serializer_class = RoomSerializer
+    lookup_field = 'room'  # Use room name instead of pk
     
     def create(self, request, *args, **kwargs):
         print(f"RoomViewSet.create called with data: {request.data}")
@@ -88,6 +90,65 @@ class RoomViewSet(viewsets.ModelViewSet):
                 {"detail": f"Room {room} on floor {floor} already exists"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+    
+    @action(detail=True, methods=['get'])
+    def sections(self, request, room=None):
+        """Get all class sections for a specific room"""
+        room_obj = self.get_object()
+        sections = room_obj.class_sections.all().select_related('course', 'faculty')
+        serializer = RoomClassSectionSerializer(sections, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'], url_path='sections/by-day')
+    def sections_by_day(self, request, room=None):
+        """Get class sections for a specific room filtered by day"""
+        room_obj = self.get_object()
+        day = request.query_params.get('day', '').strip().upper()
+        
+        if not day:
+            return Response(
+                {"detail": "Day parameter is required. Use format: ?day=M or ?day=MONDAY"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Map full day names to abbreviations
+        day_mapping = {
+            'MONDAY': 'M',
+            'TUESDAY': 'T',
+            'WEDNESDAY': 'W',
+            'THURSDAY': 'TH',
+            'FRIDAY': 'F',
+            'SATURDAY': 'S',
+            'SUNDAY': 'SU'
+        }
+        
+        # Convert full day name to abbreviation if needed
+        if day in day_mapping:
+            day = day_mapping[day]
+        
+        # Get all sections for this room
+        sections = room_obj.class_sections.all().select_related('course', 'faculty')
+        
+        # Filter sections by day
+        filtered_sections = []
+        for section in sections:
+            if section.schedule:
+                # Parse schedule format: "M TH | 11:00 AM - 12:00 PM"
+                schedule_parts = section.schedule.split('|')
+                if len(schedule_parts) >= 1:
+                    days_part = schedule_parts[0].strip()
+                    section_days = days_part.split()
+                    
+                    # Check if the requested day is in this section's days
+                    if day in section_days:
+                        filtered_sections.append(section)
+        
+        serializer = RoomClassSectionSerializer(filtered_sections, many=True)
+        return Response({
+            "room": str(room_obj),
+            "day": day,
+            "sections": serializer.data
+        })
 
 class ClassSectionViewSet(viewsets.ModelViewSet):
     """

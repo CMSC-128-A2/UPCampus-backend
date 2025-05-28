@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import Course, ClassSection, Department, Faculty, AdminUser, Room
 from .utils import check_schedule_conflicts
+from datetime import datetime
+import re
 
 class RoomSerializer(serializers.ModelSerializer):
     class Meta:
@@ -11,10 +13,11 @@ class RoomSerializer(serializers.ModelSerializer):
 class ClassSectionSerializer(serializers.ModelSerializer):
     faculty_name = serializers.SerializerMethodField()
     room_display = serializers.SerializerMethodField()
+    is_active = serializers.SerializerMethodField()
     
     class Meta:
         model = ClassSection
-        fields = ['id', 'section', 'type', 'room', 'room_display', 'schedule', 'faculty', 'faculty_name']
+        fields = ['id', 'section', 'type', 'room', 'room_display', 'schedule', 'faculty', 'faculty_name', 'is_active']
         read_only_fields = ['id']
     
     def get_faculty_name(self, obj):
@@ -22,6 +25,133 @@ class ClassSectionSerializer(serializers.ModelSerializer):
     
     def get_room_display(self, obj):
         return str(obj.room) if obj.room else None
+    
+    def get_is_active(self, obj):
+        """Check if this class section is currently active (happening right now)"""
+        if not obj.schedule:
+            return False
+        
+        # Get current time and day
+        now = datetime.now()
+        current_day = now.strftime('%A').upper()  # MONDAY, TUESDAY, etc.
+        current_time = now.time()
+        
+        # Map full day names to abbreviations used in schedule
+        day_mapping = {
+            'MONDAY': 'M',
+            'TUESDAY': 'T',
+            'WEDNESDAY': 'W',
+            'THURSDAY': 'TH',
+            'FRIDAY': 'F',
+            'SATURDAY': 'S',
+            'SUNDAY': 'SU'
+        }
+        
+        current_day_abbrev = day_mapping.get(current_day, '')
+        
+        # Parse schedule format: "M TH | 11:00 AM - 12:00 PM"
+        schedule_parts = obj.schedule.split('|')
+        if len(schedule_parts) != 2:
+            return False
+        
+        days_part = schedule_parts[0].strip()
+        time_part = schedule_parts[1].strip()
+        
+        # Check if current day is in the schedule
+        section_days = days_part.split()
+        if current_day_abbrev not in section_days:
+            return False
+        
+        # Parse time range
+        time_pattern = r"(\d+:\d+\s*[AP]M)\s*-\s*(\d+:\d+\s*[AP]M)"
+        time_match = re.match(time_pattern, time_part)
+        
+        if not time_match:
+            return False
+        
+        start_time_str, end_time_str = time_match.groups()
+        
+        try:
+            # Convert to datetime objects for comparison
+            start_time = datetime.strptime(start_time_str.strip(), "%I:%M %p").time()
+            end_time = datetime.strptime(end_time_str.strip(), "%I:%M %p").time()
+            
+            # Check if current time is within the class time range
+            return start_time <= current_time <= end_time
+        except ValueError:
+            return False
+
+class RoomClassSectionSerializer(serializers.ModelSerializer):
+    """Serializer for class sections when viewed from a room's perspective"""
+    faculty_name = serializers.SerializerMethodField()
+    course_code = serializers.SerializerMethodField()
+    is_active = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ClassSection
+        fields = ['id', 'course_code', 'section', 'type', 'schedule', 'faculty', 'faculty_name', 'is_active']
+        read_only_fields = ['id']
+    
+    def get_faculty_name(self, obj):
+        return obj.faculty.name if obj.faculty else None
+    
+    def get_course_code(self, obj):
+        return obj.course.course_code if obj.course else None
+    
+    def get_is_active(self, obj):
+        """Check if this class section is currently active (happening right now)"""
+        if not obj.schedule:
+            return False
+        
+        # Get current time and day
+        now = datetime.now()
+        current_day = now.strftime('%A').upper()  # MONDAY, TUESDAY, etc.
+        current_time = now.time()
+        
+        # Map full day names to abbreviations used in schedule
+        day_mapping = {
+            'MONDAY': 'M',
+            'TUESDAY': 'T',
+            'WEDNESDAY': 'W',
+            'THURSDAY': 'TH',
+            'FRIDAY': 'F',
+            'SATURDAY': 'S',
+            'SUNDAY': 'SU'
+        }
+        
+        current_day_abbrev = day_mapping.get(current_day, '')
+        
+        # Parse schedule format: "M TH | 11:00 AM - 12:00 PM"
+        schedule_parts = obj.schedule.split('|')
+        if len(schedule_parts) != 2:
+            return False
+        
+        days_part = schedule_parts[0].strip()
+        time_part = schedule_parts[1].strip()
+        
+        # Check if current day is in the schedule
+        section_days = days_part.split()
+        if current_day_abbrev not in section_days:
+            return False
+        
+        # Parse time range
+        time_pattern = r"(\d+:\d+\s*[AP]M)\s*-\s*(\d+:\d+\s*[AP]M)"
+        time_match = re.match(time_pattern, time_part)
+        
+        if not time_match:
+            return False
+        
+        start_time_str, end_time_str = time_match.groups()
+        
+        try:
+            # Convert to datetime objects for comparison
+            start_time = datetime.strptime(start_time_str.strip(), "%I:%M %p").time()
+            end_time = datetime.strptime(end_time_str.strip(), "%I:%M %p").time()
+            
+            # Check if current time is within the class time range
+            return start_time <= current_time <= end_time
+        except ValueError:
+            return False
 
 class CourseSerializer(serializers.ModelSerializer):
     sections = ClassSectionSerializer(many=True, read_only=True)
