@@ -32,10 +32,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "secret")
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
 
-ALLOWED_HOSTS = [
-    "localhost", "127.0.0.1", "upsee.sheldonarthursagrado.site", "j4cugpg9vh.ap-southeast-1.awsapprunner.com",
-    "kzpqqzpeyj.ap-southeast-1.awsapprunner.com", "169.254.172.2"
-]
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
@@ -84,10 +81,11 @@ REST_FRAMEWORK = {
 CSRF_COOKIE_SECURE = False  # Set to False for local development
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = False  # Set to False for local development
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000", "http://127.0.0.1:3000", "https://upsee.sheldonarthursagrado.site",
-    "https://j4cugpg9vh.ap-southeast-1.awsapprunner.com", "https://kzpqqzpeyj.ap-southeast-1.awsapprunner.com"
-]
+# CSRF_TRUSTED_ORIGINS = [
+#     "http://localhost:3000", "http://127.0.0.1:3000", "https://upsee.sheldonarthursagrado.site",
+#     "https://j4cugpg9vh.ap-southeast-1.awsapprunner.com", "https://kzpqqzpeyj.ap-southeast-1.awsapprunner.com"
+# ]
+CSRF_TRUSTED_ORIGINS = ["*"]
 
 ROOT_URLCONF = "main.urls"
 
