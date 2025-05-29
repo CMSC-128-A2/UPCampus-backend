@@ -72,20 +72,19 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '60/minute',
-        'user': '120/minute',
+        'anon': '500/minute',
+        'user': '1000/minute',
     },
 }
 
 # CSRF settings
 CSRF_COOKIE_SECURE = False  # Set to False for local development
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = None  # Allow cross-site requests
 SESSION_COOKIE_SECURE = False  # Set to False for local development
-# CSRF_TRUSTED_ORIGINS = [
-#     "http://localhost:3000", "http://127.0.0.1:3000", "https://upsee.sheldonarthursagrado.site",
-#     "https://j4cugpg9vh.ap-southeast-1.awsapprunner.com", "https://kzpqqzpeyj.ap-southeast-1.awsapprunner.com"
-# ]
-CSRF_TRUSTED_ORIGINS = ["*"]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000", "http://127.0.0.1:3000", "https://upsee.sheldonarthursagrado.site",
+    "https://j4cugpg9vh.ap-southeast-1.awsapprunner.com", "https://kzpqqzpeyj.ap-southeast-1.awsapprunner.com"
+]
 
 ROOT_URLCONF = "main.urls"
 
@@ -167,9 +166,27 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # CORS settings
-# CORS_ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:8000", "http://127.0.0.1:3000", "https://upsee.sheldonarthursagrado.site", "https://j4cugpg9vh.ap-southeast-1.awsapprunner.com", "http://169.254.172.2"]
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True  # For development only
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 
 STORAGES = {
